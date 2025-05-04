@@ -14,8 +14,10 @@ export default function Home() {
   const [elapsedTime, setElapsedTime] = useState(0);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [finalScore, setFinalScore] = useState<number | null>(null);
+  const [showPenalty, setShowPenalty] = useState(false);
 
   const animatedScore = useMotionValue(0);
+  const animatedPenalty = useMotionValue(0);
 
   useEffect(() => {
     setNumbers(numbers.sort(() => Math.random() - 0.5));
@@ -67,23 +69,43 @@ export default function Home() {
 
   useEffect(() => {
     if (gameOver) {
-      const calculatedFinalScore = score - Math.floor(elapsedTime);
+      const calculatedPenalty = Math.floor(elapsedTime);
+      const calculatedFinalScore = score - calculatedPenalty;
       setFinalScore(calculatedFinalScore);
+      // setShowPenalty(true);
 
       animatedScore.set(score);
-      const controls = animate(animatedScore, calculatedFinalScore, {
-        duration: 1.5,
-        ease: "easeInOut",
+      animatedPenalty.set(calculatedPenalty);
+
+      const scoreControls = animate(animatedScore, calculatedFinalScore, {
+        duration: 3,
+        ease: "easeOut",
       });
 
-      return () => controls.stop();
+      const penaltyControls = animate(animatedPenalty, 0, {
+        duration: 3,
+        ease: "easeOut",
+        onComplete: () => {
+          setTimeout(() => {
+            // setShowPenalty(false);
+          }, 250);
+        }
+      });
+
+      return () => {
+        scoreControls.stop();
+        penaltyControls.stop();
+      };
     } else {
       setFinalScore(null);
       animatedScore.set(0);
+      animatedPenalty.set(0);
+      setShowPenalty(false);
     }
-  }, [gameOver, score, elapsedTime, animatedScore]);
+  }, [gameOver, score, elapsedTime, animatedScore, animatedPenalty]);
 
   const roundedAnimatedScore = useTransform(animatedScore, value => Math.round(value));
+  const roundedAnimatedPenalty = useTransform(animatedPenalty, value => Math.round(value));
 
   const handleClick = (id: number) => {
     const newIndex = id - 1;
@@ -106,13 +128,42 @@ export default function Home() {
   return (
     <div className="grid grid-rows-[auto_1fr_auto] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <div className="flex justify-between w-full">
-          <h1 className="text-2xl font-bold">
-            Score: {gameOver ? <motion.span>{roundedAnimatedScore}</motion.span> : score}
-          </h1>
-          <h1 className="text-2xl font-bold">Time: {formattedTime}</h1>
-        </div>
-        {gameOver && <h1 className="text-2xl font-bold text-center w-full">Game Over</h1>}
+        {gameOver ? (
+          <div className="flex flex-col justify-between w-full items-center sm:items-start">
+            <h1 className="text-2xl font-bold text-center w-full m-10">Game Over</h1>
+            <div className="flex flex-row gap-[32px] justify-between w-full items-center">
+            <div className="flex flex-col justify-between w-full items-start sm:items-start">
+              <h1 className="text-2xl font-bold">
+                Score: {score}
+              </h1>
+              <h1 className="text-2xl font-bold">
+                Time: {formattedTime}
+              </h1>
+            </div>
+            <hr className="w-3 border-t border-gray-300 my-1" />
+            </div>
+            <hr className="w-full border-t border-gray-300 my-5" />
+            <div className="flex flex-row gap-[32px] items-start w-full">
+              <h1 className="text-2xl font-bold">
+                Final Score: <motion.span>{roundedAnimatedScore}</motion.span>
+              </h1>
+              {showPenalty && (
+                <h1 className="text-2xl font-bold">
+                  -<motion.span>{roundedAnimatedPenalty}</motion.span>s
+                </h1>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex justify-between w-full items-center sm:items-start">
+            <h1 className="text-2xl font-bold">
+              Score: {gameOver ? <motion.span>{roundedAnimatedScore}</motion.span> : score}
+            </h1>
+            <h1 className="text-2xl font-bold">
+              Time: {formattedTime}
+            </h1>
+          </div>
+          )}
         {!gameOver && (
           <>
           <div className="flex flex-row gap-[32px]">
