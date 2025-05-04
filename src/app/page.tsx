@@ -1,6 +1,7 @@
 'use client'
 import Button from "@/components/Button";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { motion, animate, useMotionValue, useTransform } from "framer-motion";
 
 export default function Home() {
   const [isRevealed, setIsRevealed] = useState<boolean[]>(Array(12).fill(false));
@@ -10,10 +11,32 @@ export default function Home() {
   const [error, setError] = useState<boolean[]>(Array(12).fill(false));
   const [success, setSuccess] = useState<boolean[]>(Array(12).fill(false));
   const [gameOver, setGameOver] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [finalScore, setFinalScore] = useState<number | null>(null);
+
+  const animatedScore = useMotionValue(0);
 
   useEffect(() => {
     setNumbers(numbers.sort(() => Math.random() - 0.5));
   }, []);
+
+  useEffect(() => {
+    let timerInterval: NodeJS.Timeout | null = null;
+    if (!gameOver) {
+      timerInterval = setInterval(() => {
+        setElapsedTime(prevTime => prevTime + 1);
+      }, 1000);
+    } else if (timerInterval) {
+      clearInterval(timerInterval);
+    }
+
+    return () => {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
+    };
+  }, [gameOver]);
 
   useEffect(() => {
     if (selectedIndices.length === 2) {
@@ -25,13 +48,13 @@ export default function Home() {
         setSelectedIndices([]);
         const nextSuccess = success.map((s, index) => index === firstIndex || index === secondIndex ? true : s);
         setSuccess(nextSuccess);
-        setScore(score + 6);
+        setScore(prevScore => prevScore + 6);
 
         if (nextSuccess.every(s => s)) {
           setGameOver(true);
         }
       } else {
-        setScore(score - 1);
+        setScore(prevScore => prevScore - 1);
         setError(prevError => prevError.map((err, index) => index === firstIndex || index === secondIndex ? true : err));
         setTimeout(() => {
           setIsRevealed(prevRevealed => prevRevealed.map((rev, index) => index === firstIndex || index === secondIndex ? false : rev));
@@ -40,7 +63,27 @@ export default function Home() {
         }, 500);
       }
     }
-  }, [selectedIndices]);
+  }, [selectedIndices, numbers, success]);
+
+  useEffect(() => {
+    if (gameOver) {
+      const calculatedFinalScore = score - Math.floor(elapsedTime);
+      setFinalScore(calculatedFinalScore);
+
+      animatedScore.set(score);
+      const controls = animate(animatedScore, calculatedFinalScore, {
+        duration: 1.5,
+        ease: "easeInOut",
+      });
+
+      return () => controls.stop();
+    } else {
+      setFinalScore(null);
+      animatedScore.set(0);
+    }
+  }, [gameOver, score, elapsedTime, animatedScore]);
+
+  const roundedAnimatedScore = useTransform(animatedScore, value => Math.round(value));
 
   const handleClick = (id: number) => {
     const newIndex = id - 1;
@@ -52,11 +95,24 @@ export default function Home() {
     setSelectedIndices([...selectedIndices, newIndex]);
   }
 
+  const formatTime = (timeInSeconds: number): string => {
+    const minutes = Math.floor(timeInSeconds / 60).toString().padStart(2, '0');
+    const seconds = (timeInSeconds % 60).toString().padStart(2, '0');
+    return `${minutes}:${seconds}`;
+  };
+
+  const formattedTime = useMemo(() => formatTime(elapsedTime), [elapsedTime]);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+    <div className="grid grid-rows-[auto_1fr_auto] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <h1 className="text-2xl font-bold">Score: {score}</h1>
-        {gameOver && <h1 className="text-2xl font-bold">Game Over</h1>}
+        <div className="flex justify-between w-full">
+          <h1 className="text-2xl font-bold">
+            Score: {gameOver ? <motion.span>{roundedAnimatedScore}</motion.span> : score}
+          </h1>
+          <h1 className="text-2xl font-bold">Time: {formattedTime}</h1>
+        </div>
+        {gameOver && <h1 className="text-2xl font-bold text-center w-full">Game Over</h1>}
         {!gameOver && (
           <>
           <div className="flex flex-row gap-[32px]">
