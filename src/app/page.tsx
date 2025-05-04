@@ -2,6 +2,8 @@
 import Button from "@/components/Button";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, animate, useMotionValue, useTransform } from "framer-motion";
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import IconButton from '@mui/material/IconButton';
 
 // Función para barajar un array (algoritmo Fisher-Yates)
 const shuffleArray = <T,>(array: T[]): T[] => {
@@ -182,12 +184,13 @@ export default function Home() {
                 onClick={handleRestart}
                 className="px-6 py-2 bg-white text-black font-bold rounded hover:bg-gray-300 transition-colors cursor-pointer w-full"
               >
-                Reiniciar Juego
+                Play Again
               </button>
             </div>
           </div>
         ) : (
-          <div className="flex justify-between w-full items-center sm:items-start">
+          <>
+          <div className="flex justify-between w-full items-center">
             <h1 className="text-2xl font-bold">
               Score: {gameOver ? <motion.span>{roundedAnimatedScore}</motion.span> : score}
             </h1>
@@ -195,9 +198,6 @@ export default function Home() {
               Time: {formattedTime}
             </h1>
           </div>
-          )}
-        {!gameOver && (
-          <>
           <div className="flex flex-row gap-[32px]">
             <Button id={1} number={numbers[0]} isRevealed={isRevealed[0]} onClick={handleClick} error={error[0]} success={success[0]} />
             <Button id={2} number={numbers[1]} isRevealed={isRevealed[1]} onClick={handleClick} error={error[1]} success={success[1]} />
@@ -217,6 +217,16 @@ export default function Home() {
             <Button id={10} number={numbers[9]} isRevealed={isRevealed[9]} onClick={handleClick} error={error[9]} success={success[9]} />
             <Button id={11} number={numbers[10]} isRevealed={isRevealed[10]} onClick={handleClick} error={error[10]} success={success[10]} />
             <Button id={12} number={numbers[11]} isRevealed={isRevealed[11]} onClick={handleClick} error={error[11]} success={success[11]} />
+          </div>
+          <div className="flex justify-center w-full items-center">
+              <IconButton
+                aria-label="reiniciar"
+                onClick={handleRestart}
+                size="large"
+                className="text-white bg-gray-600 hover:bg-gray-800 transition-colors"
+              >
+                <RestartAltIcon fontSize="inherit" style={{ color: 'white' }} />
+              </IconButton>
           </div>
           </>
         )}
