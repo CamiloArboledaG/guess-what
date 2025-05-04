@@ -1,11 +1,23 @@
 'use client'
 import Button from "@/components/Button";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, animate, useMotionValue, useTransform } from "framer-motion";
+
+// Función para barajar un array (algoritmo Fisher-Yates)
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffledArray = [...array];
+  for (let i = shuffledArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]];
+  }
+  return shuffledArray;
+};
+
+const initialNumbers = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6];
 
 export default function Home() {
   const [isRevealed, setIsRevealed] = useState<boolean[]>(Array(12).fill(false));
-  const [numbers, setNumbers] = useState([1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]);
+  const [numbers, setNumbers] = useState(() => shuffleArray(initialNumbers));
   const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
   const [score, setScore] = useState(0);
   const [error, setError] = useState<boolean[]>(Array(12).fill(false));
@@ -19,9 +31,21 @@ export default function Home() {
   const animatedScore = useMotionValue(0);
   const animatedPenalty = useMotionValue(0);
 
-  useEffect(() => {
-    setNumbers(numbers.sort(() => Math.random() - 0.5));
-  }, []);
+  // Usar useCallback para la función de reinicio
+  const handleRestart = useCallback(() => {
+    setIsRevealed(Array(12).fill(false));
+    setNumbers(shuffleArray(initialNumbers));
+    setSelectedIndices([]);
+    setScore(0);
+    setError(Array(12).fill(false));
+    setSuccess(Array(12).fill(false));
+    setGameOver(false);
+    setElapsedTime(0);
+    setFinalScore(null);
+    setShowPenalty(false);
+    animatedScore.set(0);
+    animatedPenalty.set(0);
+  }, [animatedScore, animatedPenalty]);
 
   useEffect(() => {
     let timerInterval: NodeJS.Timeout | null = null;
@@ -129,8 +153,8 @@ export default function Home() {
     <div className="grid grid-rows-[auto_1fr_auto] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         {gameOver ? (
-          <div className="flex flex-col justify-between w-full items-center sm:items-start">
-            <h1 className="text-2xl font-bold text-center w-full m-10">Game Over</h1>
+          <div className="flex flex-col justify-between min-w-[300px] items-center sm:items-start">
+            <h1 className="text-2xl font-bold text-center w-full my-10">Game Over</h1>
             <div className="flex flex-row gap-[32px] justify-between w-full items-center">
             <div className="flex flex-col justify-between w-full items-start sm:items-start">
               <h1 className="text-2xl font-bold">
@@ -152,6 +176,14 @@ export default function Home() {
                   -<motion.span>{roundedAnimatedPenalty}</motion.span>s
                 </h1>
               )}
+            </div>
+            <div className="w-full flex justify-center mt-8">
+              <button
+                onClick={handleRestart}
+                className="px-6 py-2 bg-white text-black font-bold rounded hover:bg-gray-300 transition-colors cursor-pointer w-full"
+              >
+                Reiniciar Juego
+              </button>
             </div>
           </div>
         ) : (
