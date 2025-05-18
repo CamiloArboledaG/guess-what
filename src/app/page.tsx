@@ -153,6 +153,7 @@ export default function Home() {
 
   return (
     <div className="grid grid-rows-[auto_1fr_auto] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+      <div></div>
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         {gameOver ? (
           <div className="flex flex-col justify-between min-w-[300px] items-center sm:items-start">
@@ -231,6 +232,9 @@ export default function Home() {
           </>
         )}
       </main>
+        <div className="text-center text-sm w-full">
+          <p className="flex justify-end text-gray-500">Made with 💜 by Camilo Arboleda</p>
+        </div>
     </div>
   );
 }
