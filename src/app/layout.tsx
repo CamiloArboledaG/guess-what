@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Guest What Game",
-  description: "A game where you guess the hidden numbers",
+  title: "Guess What!",
+  description: "Juego de memoria: encuentra todos los pares de cartas",
 };
 
 export default function RootLayout({

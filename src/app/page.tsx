@@ -1,240 +1,247 @@
 'use client'
-import Button from "@/components/Button";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion, animate, useMotionValue, useTransform } from "framer-motion";
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import IconButton from '@mui/material/IconButton';
+import { useGame, Difficulty, UseGameReturn } from "@/hooks/use-game";
+import Card from "@/components/Card";
 
-// Función para barajar un array (algoritmo Fisher-Yates)
-const shuffleArray = <T,>(array: T[]): T[] => {
-  const shuffledArray = [...array];
-  for (let i = shuffledArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]];
-  }
-  return shuffledArray;
+const containerVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.06, delayChildren: 0.1 } },
 };
 
-const initialNumbers = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6];
+const cardEntranceVariants = {
+  hidden: { scale: 0, opacity: 0, y: 20 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring' as const, stiffness: 200, damping: 20 },
+  },
+};
 
-export default function Home() {
-  const [isRevealed, setIsRevealed] = useState<boolean[]>(Array(12).fill(false));
-  const [numbers, setNumbers] = useState(() => shuffleArray(initialNumbers));
-  const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
-  const [score, setScore] = useState(0);
-  const [error, setError] = useState<boolean[]>(Array(12).fill(false));
-  const [success, setSuccess] = useState<boolean[]>(Array(12).fill(false));
-  const [gameOver, setGameOver] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState(0);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [finalScore, setFinalScore] = useState<number | null>(null);
-  const [showPenalty, setShowPenalty] = useState(false);
+const screenTransition = { duration: 0.3 };
 
-  const animatedScore = useMotionValue(0);
-  const animatedPenalty = useMotionValue(0);
-
-  // Usar useCallback para la función de reinicio
-  const handleRestart = useCallback(() => {
-    setIsRevealed(Array(12).fill(false));
-    setNumbers(shuffleArray(initialNumbers));
-    setSelectedIndices([]);
-    setScore(0);
-    setError(Array(12).fill(false));
-    setSuccess(Array(12).fill(false));
-    setGameOver(false);
-    setElapsedTime(0);
-    setFinalScore(null);
-    setShowPenalty(false);
-    animatedScore.set(0);
-    animatedPenalty.set(0);
-  }, [animatedScore, animatedPenalty]);
-
-  useEffect(() => {
-    let timerInterval: NodeJS.Timeout | null = null;
-    if (!gameOver) {
-      timerInterval = setInterval(() => {
-        setElapsedTime(prevTime => prevTime + 1);
-      }, 1000);
-    } else if (timerInterval) {
-      clearInterval(timerInterval);
-    }
-
-    return () => {
-      if (timerInterval) {
-        clearInterval(timerInterval);
-      }
-    };
-  }, [gameOver]);
-
-  useEffect(() => {
-    if (selectedIndices.length === 2) {
-      const [firstIndex, secondIndex] = selectedIndices;
-      const firstValue = numbers[firstIndex];
-      const secondValue = numbers[secondIndex];
-
-      if (firstValue === secondValue) {
-        setSelectedIndices([]);
-        const nextSuccess = success.map((s, index) => index === firstIndex || index === secondIndex ? true : s);
-        setSuccess(nextSuccess);
-        setScore(prevScore => prevScore + 6);
-
-        if (nextSuccess.every(s => s)) {
-          setGameOver(true);
-        }
-      } else {
-        setScore(prevScore => prevScore - 1);
-        setError(prevError => prevError.map((err, index) => index === firstIndex || index === secondIndex ? true : err));
-        setTimeout(() => {
-          setIsRevealed(prevRevealed => prevRevealed.map((rev, index) => index === firstIndex || index === secondIndex ? false : rev));
-          setSelectedIndices([]);
-          setError(Array(12).fill(false));
-        }, 500);
-      }
-    }
-  }, [selectedIndices, numbers, success]);
-
-  useEffect(() => {
-    if (gameOver) {
-      const calculatedPenalty = Math.floor(elapsedTime);
-      const calculatedFinalScore = score - calculatedPenalty;
-      setFinalScore(calculatedFinalScore);
-      // setShowPenalty(true);
-
-      animatedScore.set(score);
-      animatedPenalty.set(calculatedPenalty);
-
-      const scoreControls = animate(animatedScore, calculatedFinalScore, {
-        duration: 3,
-        ease: "easeOut",
-      });
-
-      const penaltyControls = animate(animatedPenalty, 0, {
-        duration: 3,
-        ease: "easeOut",
-        onComplete: () => {
-          setTimeout(() => {
-            // setShowPenalty(false);
-          }, 250);
-        }
-      });
-
-      return () => {
-        scoreControls.stop();
-        penaltyControls.stop();
-      };
-    } else {
-      setFinalScore(null);
-      animatedScore.set(0);
-      animatedPenalty.set(0);
-      setShowPenalty(false);
-    }
-  }, [gameOver, score, elapsedTime, animatedScore, animatedPenalty]);
-
-  const roundedAnimatedScore = useTransform(animatedScore, value => Math.round(value));
-  const roundedAnimatedPenalty = useTransform(animatedPenalty, value => Math.round(value));
-
-  const handleClick = (id: number) => {
-    const newIndex = id - 1;
-    if (selectedIndices.length === 2 || isRevealed[newIndex] || numbers[newIndex] === null) {
-      return;
-    }
-
-    setIsRevealed(isRevealed.map((revealed, index) => index === newIndex ? true : revealed));
-    setSelectedIndices([...selectedIndices, newIndex]);
-  }
-
-  const formatTime = (timeInSeconds: number): string => {
-    const minutes = Math.floor(timeInSeconds / 60).toString().padStart(2, '0');
-    const seconds = (timeInSeconds % 60).toString().padStart(2, '0');
-    return `${minutes}:${seconds}`;
-  };
-
-  const formattedTime = useMemo(() => formatTime(elapsedTime), [elapsedTime]);
+function Confetti() {
+  const particles = useMemo(
+    () =>
+      Array.from({ length: 60 }, (_, i) => ({
+        id: i,
+        x: Math.random() * 100,
+        size: 5 + Math.random() * 6,
+        color: ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'][
+          Math.floor(Math.random() * 6)
+        ],
+        delay: Math.random() * 0.8,
+        duration: 1.5 + Math.random() * 1.5,
+        rotate: 180 + Math.random() * 360,
+      })),
+    []
+  );
 
   return (
-    <div className="grid grid-rows-[auto_1fr_auto] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <div></div>
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        {gameOver ? (
-          <div className="flex flex-col justify-between min-w-[300px] items-center sm:items-start">
-            <h1 className="text-2xl font-bold text-center w-full my-10">Game Over</h1>
-            <div className="flex flex-row gap-[32px] justify-between w-full items-center">
-            <div className="flex flex-col justify-between w-full items-start sm:items-start">
-              <h1 className="text-2xl font-bold">
-                Score: {score}
-              </h1>
-              <h1 className="text-2xl font-bold">
-                Time: {formattedTime}
-              </h1>
-            </div>
-            <hr className="w-3 border-t border-gray-300 my-1" />
-            </div>
-            <hr className="w-full border-t border-gray-300 my-5" />
-            <div className="flex flex-row gap-[32px] items-start w-full">
-              <h1 className="text-2xl font-bold">
-                Final Score: <motion.span>{roundedAnimatedScore}</motion.span>
-              </h1>
-              {showPenalty && (
-                <h1 className="text-2xl font-bold">
-                  -<motion.span>{roundedAnimatedPenalty}</motion.span>s
-                </h1>
-              )}
-            </div>
-            <div className="w-full flex justify-center mt-8">
-              <button
-                onClick={handleRestart}
-                className="px-6 py-2 bg-white text-black font-bold rounded hover:bg-gray-300 transition-colors cursor-pointer w-full"
-              >
-                Play Again
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
-          <div className="flex justify-between w-full items-center">
-            <h1 className="text-2xl font-bold">
-              Score: {gameOver ? <motion.span>{roundedAnimatedScore}</motion.span> : score}
-            </h1>
-            <h1 className="text-2xl font-bold">
-              Time: {formattedTime}
-            </h1>
-          </div>
-          <div className="flex flex-row gap-[32px]">
-            <Button id={1} number={numbers[0]} isRevealed={isRevealed[0]} onClick={handleClick} error={error[0]} success={success[0]} />
-            <Button id={2} number={numbers[1]} isRevealed={isRevealed[1]} onClick={handleClick} error={error[1]} success={success[1]} />
-            <Button id={3} number={numbers[2]} isRevealed={isRevealed[2]} onClick={handleClick} error={error[2]} success={success[2]} />
-          </div>
-          <div className="flex flex-row gap-[32px]">
-            <Button id={4} number={numbers[3]} isRevealed={isRevealed[3]} onClick={handleClick} error={error[3]} success={success[3]} />
-            <Button id={5} number={numbers[4]} isRevealed={isRevealed[4]} onClick={handleClick} error={error[4]} success={success[4]} />
-            <Button id={6} number={numbers[5]} isRevealed={isRevealed[5]} onClick={handleClick} error={error[5]} success={success[5]} />
-          </div>
-          <div className="flex flex-row gap-[32px]">
-            <Button id={7} number={numbers[6]} isRevealed={isRevealed[6]} onClick={handleClick} error={error[6]} success={success[6]} />
-            <Button id={8} number={numbers[7]} isRevealed={isRevealed[7]} onClick={handleClick} error={error[7]} success={success[7]} />
-            <Button id={9} number={numbers[8]} isRevealed={isRevealed[8]} onClick={handleClick} error={error[8]} success={success[8]} />
-          </div>
-          <div className="flex flex-row gap-[32px]">
-            <Button id={10} number={numbers[9]} isRevealed={isRevealed[9]} onClick={handleClick} error={error[9]} success={success[9]} />
-            <Button id={11} number={numbers[10]} isRevealed={isRevealed[10]} onClick={handleClick} error={error[10]} success={success[10]} />
-            <Button id={12} number={numbers[11]} isRevealed={isRevealed[11]} onClick={handleClick} error={error[11]} success={success[11]} />
-          </div>
-          <div className="flex justify-center w-full items-center">
-              <IconButton
-                aria-label="reiniciar"
-                onClick={handleRestart}
-                size="large"
-                className="text-white bg-gray-600 hover:bg-gray-800 transition-colors"
-              >
-                <RestartAltIcon fontSize="inherit" style={{ color: 'white' }} />
-              </IconButton>
-          </div>
-          </>
-        )}
-      </main>
-        <div className="text-center text-sm w-full">
-          <p className="flex justify-end text-gray-500">Made with 💜 by Camilo Arboleda</p>
+    <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+      {particles.map(p => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-sm"
+          style={{ left: `${p.x}%`, width: p.size, height: p.size, backgroundColor: p.color, top: -10 }}
+          animate={{ y: '105vh', rotate: p.rotate, opacity: [1, 1, 0.5, 0] }}
+          transition={{ duration: p.duration, delay: p.delay, ease: 'easeIn' }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function StartScreen({ onStart }: { onStart: (d: Difficulty) => void }) {
+  const [selected, setSelected] = useState<Difficulty>('easy');
+
+  return (
+    <motion.div
+      className="flex flex-col items-center gap-8 max-w-sm w-full"
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -30 }}
+      transition={screenTransition}
+    >
+      <div className="text-center">
+        <h1 className="text-5xl font-bold text-white mb-2 tracking-tight">Guess What!</h1>
+        <p className="text-slate-400 text-base">Encuentra todos los pares y bate tu récord</p>
+      </div>
+
+      <div className="bg-slate-800/60 rounded-2xl p-5 w-full border border-slate-700">
+        <h2 className="text-slate-300 text-sm font-semibold uppercase tracking-widest mb-4">Cómo jugar</h2>
+        <ul className="text-slate-400 text-sm space-y-2">
+          <li>👆 Voltea dos cartas por turno</li>
+          <li>🧠 Memoriza dónde están los pares</li>
+          <li>✅ Encuentra todos los pares para ganar</li>
+          <li>⏱️ El timer arranca con tu primer clic</li>
+        </ul>
+      </div>
+
+      <div className="w-full">
+        <p className="text-slate-400 text-sm font-medium mb-3">Dificultad</p>
+        <div className="grid grid-cols-2 gap-3">
+          {(['easy', 'hard'] as Difficulty[]).map(diff => (
+            <button
+              key={diff}
+              onClick={() => setSelected(diff)}
+              className={`py-3 px-4 rounded-xl font-semibold text-sm border-2 transition-all cursor-pointer ${
+                selected === diff
+                  ? 'bg-indigo-600 border-indigo-400 text-white'
+                  : 'bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-400'
+              }`}
+            >
+              {diff === 'easy' ? '😌 Fácil (8 cartas)' : '🔥 Difícil (12 cartas)'}
+            </button>
+          ))}
         </div>
+      </div>
+
+      <button
+        onClick={() => onStart(selected)}
+        className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg rounded-xl transition-colors cursor-pointer"
+      >
+        Jugar
+      </button>
+    </motion.div>
+  );
+}
+
+function GameBoard({ game }: { game: UseGameReturn }) {
+  return (
+    <motion.div
+      className="flex flex-col items-center gap-6 w-full max-w-sm"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={screenTransition}
+    >
+      <div className="flex justify-between w-full items-center">
+        <IconButton aria-label="inicio" onClick={game.goToStart} size="medium" sx={{ color: 'rgb(148,163,184)', '&:hover': { color: 'white' } }}>
+          <ArrowBackIcon />
+        </IconButton>
+
+        <div className="flex gap-8">
+          <div className="flex flex-col items-center">
+            <span className="text-slate-400 text-xs uppercase tracking-widest">Intentos</span>
+            <span className="text-white text-2xl font-bold">{game.attempts}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-slate-400 text-xs uppercase tracking-widest">Tiempo</span>
+            <span className="text-white text-2xl font-bold font-mono">{game.formattedTime}</span>
+          </div>
+        </div>
+
+        <IconButton aria-label="reiniciar" onClick={game.restartGame} size="medium" sx={{ color: 'rgb(148,163,184)', '&:hover': { color: 'white' } }}>
+          <RestartAltIcon />
+        </IconButton>
+      </div>
+
+      <motion.div
+        key={game.gameKey}
+        className="grid grid-cols-4 gap-3"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {game.cards.map((emoji, i) => (
+          <motion.div key={i} variants={cardEntranceVariants}>
+            <Card
+              emoji={emoji}
+              isRevealed={game.isRevealed[i]}
+              error={game.error[i]}
+              success={game.success[i]}
+              onClick={() => game.handleClick(i)}
+            />
+          </motion.div>
+        ))}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function WinScreen({ game }: { game: UseGameReturn }) {
+  return (
+    <motion.div
+      className="flex flex-col items-center gap-6 max-w-sm w-full"
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={screenTransition}
+    >
+      <Confetti />
+
+      <motion.div
+        className="text-center"
+        initial={{ y: -20 }}
+        animate={{ y: 0 }}
+        transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+      >
+        <h1 className="text-5xl font-bold text-white mb-1">¡Ganaste! 🎉</h1>
+        <p className="text-slate-400">
+          {game.difficulty === 'easy' ? 'Fácil' : 'Difícil'}
+          {game.isNewRecord && (
+            <span className="ml-2 text-yellow-400 font-semibold">⭐ ¡Nuevo récord!</span>
+          )}
+        </p>
+      </motion.div>
+
+      <div className="bg-slate-800/60 rounded-2xl p-5 w-full border border-slate-700 space-y-4">
+        <div className="flex justify-between items-center">
+          <span className="text-slate-400">Intentos</span>
+          <span className="text-white text-xl font-bold">{game.attempts}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-slate-400">Tiempo</span>
+          <span className="text-white text-xl font-bold font-mono">{game.formattedTime}</span>
+        </div>
+        {game.formattedBestTime && (
+          <div className="flex justify-between items-center border-t border-slate-600 pt-4">
+            <span className="text-slate-400">Mejor tiempo</span>
+            <span className={`text-xl font-bold font-mono ${game.isNewRecord ? 'text-yellow-400' : 'text-slate-300'}`}>
+              {game.formattedBestTime}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="w-full space-y-3">
+        <button
+          onClick={game.restartGame}
+          className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-colors cursor-pointer"
+        >
+          Jugar de nuevo
+        </button>
+        <button
+          onClick={game.goToStart}
+          className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-xl transition-colors cursor-pointer"
+        >
+          Cambiar dificultad
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+export default function Home() {
+  const game = useGame();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 flex flex-col items-center justify-center p-6 font-[family-name:var(--font-geist-sans)]">
+      <main className="w-full flex flex-col items-center justify-center flex-1">
+        <AnimatePresence mode="wait">
+          {game.gameState === 'idle' && <StartScreen key="start" onStart={game.startGame} />}
+          {game.gameState === 'playing' && <GameBoard key="game" game={game} />}
+          {game.gameState === 'won' && <WinScreen key="won" game={game} />}
+        </AnimatePresence>
+      </main>
+      <footer className="text-center text-sm mt-6">
+        <p className="text-slate-600">Made with 💜 by Camilo Arboleda</p>
+      </footer>
     </div>
   );
 }
