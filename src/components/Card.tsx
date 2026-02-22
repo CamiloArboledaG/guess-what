@@ -1,4 +1,5 @@
-import { motion } from "framer-motion";
+import { motion, useAnimate } from "framer-motion";
+import { useEffect } from "react";
 
 interface CardProps {
   emoji: string;
@@ -8,12 +9,20 @@ interface CardProps {
   onClick: () => void;
 }
 
-const Card: React.FC<CardProps> = ({ emoji, isRevealed, error, success, onClick }) => {
+const Card = ({ emoji, isRevealed, error, success, onClick }: CardProps) => {
   const canClick = !isRevealed && !success;
+  const [scope, animateCard] = useAnimate();
+
+  useEffect(() => {
+    if (success && scope.current) {
+      animateCard(scope.current, { scale: [1, 1.2, 0.9, 1.08, 1] }, { duration: 0.45, delay: 0.35 });
+    }
+  }, [success, animateCard, scope]);
 
   return (
     <motion.div
-      className={`relative w-[72px] h-[72px] sm:w-20 sm:h-20 select-none ${canClick ? 'cursor-pointer' : 'cursor-default'}`}
+      ref={scope}
+      className={`relative w-16 h-16 sm:w-[72px] sm:h-[72px] md:w-20 md:h-20 select-none ${canClick ? 'cursor-pointer' : 'cursor-default'}`}
       onClick={canClick ? onClick : undefined}
       whileHover={canClick ? { scale: 1.08, y: -3 } : {}}
       whileTap={canClick ? { scale: 0.95 } : {}}
@@ -28,14 +37,17 @@ const Card: React.FC<CardProps> = ({ emoji, isRevealed, error, success, onClick 
         transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
       >
         <div
-          className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-700 to-indigo-900 border-2 border-indigo-500 flex items-center justify-center shadow-lg"
-          style={{ backfaceVisibility: 'hidden' }}
-        >
-          <div className="w-7 h-7 rounded-full bg-indigo-600 border-2 border-indigo-400 opacity-50" />
-        </div>
+          className="absolute inset-0 rounded-xl border-2 border-indigo-500 shadow-lg"
+          style={{
+            backfaceVisibility: 'hidden',
+            backgroundColor: 'rgb(55, 48, 163)',
+            backgroundImage: 'radial-gradient(circle, rgba(129, 140, 248, 0.55) 1.5px, transparent 1.5px)',
+            backgroundSize: '10px 10px',
+          }}
+        />
 
         <div
-          className={`absolute inset-0 rounded-xl flex items-center justify-center text-3xl sm:text-4xl shadow-lg border-2 ${
+          className={`absolute inset-0 rounded-xl flex items-center justify-center text-2xl sm:text-3xl md:text-4xl shadow-lg border-2 ${
             error
               ? 'bg-red-500 border-red-400'
               : success

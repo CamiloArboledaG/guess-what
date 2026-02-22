@@ -143,7 +143,7 @@ function GameBoard({ game }: { game: UseGameReturn }) {
 
       <motion.div
         key={game.gameKey}
-        className="grid grid-cols-4 gap-3"
+        className="grid grid-cols-4 gap-2 sm:gap-3"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -231,7 +231,7 @@ export default function Home() {
   const game = useGame();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 flex flex-col items-center justify-center p-6 font-[family-name:var(--font-geist-sans)]">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 flex flex-col items-center justify-center p-4 sm:p-6 font-[family-name:var(--font-geist-sans)]">
       <main className="w-full flex flex-col items-center justify-center flex-1">
         <AnimatePresence mode="wait">
           {game.gameState === 'idle' && <StartScreen key="start" onStart={game.startGame} />}
